@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>متابعة العمالة الميدانية</title>
+<meta name="application-name" content="عمالة ميدانية">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="عمالة ميدانية">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#15803d">
+<link rel="manifest" id="pwaManifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --green:#15803d; --green-d:#14532d; --green-l:#16a34a; --green-bg:#f0fdf4;
+  --amber:#ea580c; --red:#dc2626; --gray:#64748b; --line:#e2e8f0;
+  --ink:#1f2937; --card:#ffffff; --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Cairo',sans-serif;background:var(--green-bg);color:var(--ink);font-size:15px;line-height:1.6}
+button{font-family:inherit;cursor:pointer;border:none}
+input,select,textarea{font-family:inherit;font-size:15px}
+.hidden{display:none!important}
+
+/* Header */
+header{background:linear-gradient(135deg,var(--green) 0%,var(--green-d) 100%);color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;box-shadow:var(--shadow);position:sticky;top:0;z-index:500}
+header .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px}
+header .brand .logo{width:34px;height:34px;background:rgba(255,255,255,.18);border-radius:9px;display:grid;place-items:center;font-size:18px}
+header .who{font-size:13px;opacity:.9;display:flex;align-items:center;gap:10px}
+header button.logout{background:rgba(255,255,255,.16);color:#fff;padding:7px 14px;border-radius:8px;font-weight:600;font-size:13px}
+header button.logout:hover{background:rgba(255,255,255,.28)}
+
+/* Layout */
+.wrap{max-width:1100px;margin:0 auto;padding:18px}
+.center-wrap{max-width:440px;margin:6vh auto;padding:18px}
+
+/* Cards */
+.card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:20px;margin-bottom:16px;border:1px solid var(--line)}
+.card h2{font-size:17px;color:var(--green-d);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+
+/* Buttons */
+.btn{background:var(--green);color:#fff;padding:11px 18px;border-radius:10px;font-weight:700;font-size:15px;display:inline-flex;align-items:center;gap:7px;justify-content:center}
+.btn:hover{background:var(--green-d)}
+.btn.sec{background:#fff;color:var(--green-d);border:1.5px solid var(--green)}
+.btn.sec:hover{background:var(--green-bg)}
+.btn.red{background:var(--red)} .btn.red:hover{background:#b91c1c}
+.btn.amber{background:var(--amber)} .btn.amber:hover{background:#c2410c}
+.btn.gray{background:#fff;color:var(--gray);border:1.5px solid var(--line)}
+.btn.gray:hover{background:#f8fafc}
+.btn.sm{padding:7px 12px;font-size:13px;border-radius:8px}
+.btn.block{width:100%}
+
+/* Forms */
+.field{margin-bottom:13px}
+.field label{display:block;font-weight:600;font-size:13px;margin-bottom:5px;color:#374151}
+.field input,.field select,.field textarea{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:9px;background:#fff;transition:.15s}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--green-l);box-shadow:0 0 0 3px rgba(22,163,74,.12)}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.row>.field{flex:1;min-width:140px}
+
+/* Tabs */
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;background:#fff;padding:6px;border-radius:12px;box-shadow:var(--shadow);border:1px solid var(--line)}
+.tabs button{background:transparent;color:var(--gray);padding:9px 14px;border-radius:8px;font-weight:600;font-size:14px}
+.tabs button.active{background:var(--green);color:#fff}
+.tabs button:hover:not(.active){background:var(--green-bg);color:var(--green-d)}
+
+/* Tables */
+.tbl-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--line)}
+table{width:100%;border-collapse:collapse;font-size:14px;background:#fff}
+th,td{padding:10px 12px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{background:var(--green-bg);color:var(--green-d);font-weight:700;font-size:13px}
+tr:hover td{background:#fafdfb}
+td.actions{display:flex;gap:6px}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700}
+.badge.in{background:#dcfce7;color:#15803d}
+.badge.out{background:#ffedd5;color:#c2410c}
+.badge.none{background:#f1f5f9;color:#64748b}
+.badge.present{background:#dcfce7;color:#15803d}
+.badge.absent{background:#fee2e2;color:#b91c1c}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.stat{background:#fff;border-radius:12px;padding:16px;border:1px solid var(--line);box-shadow:var(--shadow)}
+.stat .n{font-size:28px;font-weight:800;color:var(--green-d)}
+.stat .l{font-size:13px;color:var(--gray);font-weight:600}
+.stat.warn .n{color:var(--amber)}
+.stat.bad .n{color:var(--red)}
+
+/* Worker check-in screen */
+.checkin-big{text-align:center}
+.checkin-big .name{font-size:22px;font-weight:800;color:var(--green-d);margin-bottom:4px}
+.checkin-big .sub{color:var(--gray);font-size:14px;margin-bottom:20px}
+.big-btns{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+.big-btns button{padding:26px 10px;border-radius:16px;font-size:18px;font-weight:800;color:#fff;display:flex;flex-direction:column;align-items:center;gap:8px;line-height:1.3}
+.big-btns .b-in{background:var(--green-l)} .big-btns .b-in:hover{background:var(--green)}
+.big-btns .b-out{background:var(--amber)} .big-btns .b-out:hover{background:#c2410c}
+.big-btns button .ic{font-size:30px}
+.big-btns button:disabled{opacity:.5;cursor:not-allowed}
+.today-box{background:var(--green-bg);border-radius:12px;padding:14px;text-align:right;font-size:14px;border:1px dashed var(--green-l)}
+.today-box .ln{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed #cbe8d5}
+.today-box .ln:last-child{border:none}
+
+/* Status message */
+.status-msg{padding:12px 14px;border-radius:10px;margin-bottom:14px;font-weight:600;font-size:14px;display:none}
+.status-msg.ok{background:#dcfce7;color:#166534;display:block}
+.status-msg.err{background:#fee2e2;color:#991b1b;display:block}
+.status-msg.info{background:#dbeafe;color:#1e40af;display:block}
+
+#map{height:380px;border-radius:12px;border:1px solid var(--line);z-index:1}
+.muted{color:var(--gray);font-size:13px}
+.empty{text-align:center;color:var(--gray);padding:30px;font-size:14px}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px}
+.toolbar .field{margin-bottom:0}
+
+/* Toast */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--green-d);color:#fff;padding:12px 22px;border-radius:10px;font-weight:600;z-index:2000;box-shadow:0 6px 20px rgba(0,0,0,.2);display:none}
+
+/* Odometer */
+.odo-card{border:2px solid var(--green-l);background:linear-gradient(135deg,#f0fdf4,#fff)}
+.odo-reading{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.odo-reading input[type=number]{flex:1;font-size:22px;font-weight:800;padding:12px 14px;border:2px solid var(--green-l);border-radius:10px;color:var(--green-d);text-align:center}
+.odo-reading input[type=number]:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(22,163,74,.15)}
+.odo-preview{width:100%;max-height:200px;object-fit:cover;border-radius:10px;border:2px solid var(--green-l);margin-bottom:10px;display:none}
+.km-result{background:var(--green-d);color:#fff;border-radius:12px;padding:14px 18px;text-align:center;margin-top:10px}
+.km-result .km-n{font-size:32px;font-weight:800}
+.km-result .km-l{font-size:13px;opacity:.85}
+.odo-history .oh-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.odo-history .oh-row:last-child{border:none}
+.odo-thumb{width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid var(--line);cursor:pointer}
+.img-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:3000;place-items:center}
+.img-modal.open{display:grid}
+.img-modal img{max-width:95vw;max-height:90vh;border-radius:10px}
+@media(max-width:560px){
+  .wrap{padding:12px}
+  th,td{padding:8px 9px;font-size:13px}
+  .stat .n{font-size:22px}
+  .odo-reading input[type=number]{font-size:18px}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN / ENTRY ============ -->
+<div id="entry" class="center-wrap">
+  <div class="card" style="text-align:center">
+    <div style="width:64px;height:64px;background:var(--green);border-radius:16px;display:grid;place-items:center;margin:0 auto 14px;font-size:30px">🚜</div>
+    <h2 style="justify-content:center;font-size:20px">نظام متابعة العمالة الميدانية</h2>
+    <p class="muted" style="margin-bottom:20px">متابعة حضور وانصراف العاملين خارج المصنع بالموقع الجغرافي</p>
+    <div class="big-btns" style="grid-template-columns:1fr 1fr">
+      <button class="b-in" style="background:var(--green-l)" onclick="showWorkerEntry()"><span class="ic">👷</span>أنا عامل<br><span style="font-size:12px;font-weight:600;opacity:.9">تسجيل حضور / انصراف</span></button>
+      <button class="b-out" style="background:var(--green-d)" onclick="showAdminLogin()"><span class="ic">🗂️</span>الإدارة / المشرف<br><span style="font-size:12px;font-weight:600;opacity:.9">لوحة المتابعة</span></button>
+    </div>
+  </div>
+
+  <!-- Worker entry -->
+  <div id="workerEntry" class="card hidden">
+    <h2>👷 دخول العامل</h2>
+    <div class="field">
+      <label>اكتب كود الموظف بتاعك</label>
+      <input id="wCode" type="text" placeholder="مثال: 1024" autocomplete="off">
+    </div>
+    <div class="field hidden" id="wNameField">
+      <label>أول مرة من الموبايل ده؟ اكتب اسمك بالكامل</label>
+      <input id="wNewName" type="text" placeholder="الاسم زي ما هو في الشركة" autocomplete="off">
+    </div>
+    <button class="btn block" onclick="workerLogin()">دخول</button>
+    <button class="btn gray block" style="margin-top:8px" onclick="backToEntry()">رجوع</button>
+  </div>
+
+  <!-- Admin login -->
+  <div id="adminLogin" class="card hidden">
+    <h2>🗂️ دخول الإدارة</h2>
+    <div class="field">
+      <label>كلمة المرور</label>
+      <input id="aPass" type="password" placeholder="كلمة المرور" autocomplete="off" onkeydown="if(event.key==='Enter')adminLogin()">
+    </div>
+    <button class="btn block" onclick="adminLogin()">دخول</button>
+    <button class="btn gray block" style="margin-top:8px" onclick="backToEntry()">رجوع</button>
+  </div>
+</div>
+
+<!-- ============ WORKER VIEW ============ -->
+<div id="workerView" class="hidden">
+  <header>
+    <div class="brand"><span class="logo">👷</span> <span id="wHeaderName">العامل</span></div>
+    <button class="logout" onclick="logout()">خروج</button>
+  </header>
+  <div class="center-wrap">
+    <div id="wStatus" class="status-msg"></div>
+    <div class="card checkin-big">
+      <div class="name" id="wName">—</div>
+      <div class="sub" id="wSub">—</div>
+      <div class="big-btns">
+        <button class="b-in" onclick="workerRecord('in')"><span class="ic">📍</span>تسجيل حضور</button>
+        <button class="b-out" onclick="workerRecord('out')"><span class="ic">🏁</span>تسجيل انصراف</button>
+      </div>
+      <div class="today-box" id="wToday"></div>
+    </div>
+    <div class="card odo-card">
+      <h2>🚗 عداد العربية</h2>
+      <p class="muted" style="margin-bottom:12px">سجّل قراءة العداد وخد صورة منه — كل يوم مرتين: لما تطلع من البيت، ولما ترجع.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <button class="btn" onclick="startOdoEntry('start')"><span style="font-size:20px">🏁</span>بداية اليوم<br><span style="font-size:11px;font-weight:600;opacity:.85">وإنت خارج من البيت</span></button>
+        <button class="btn amber" onclick="startOdoEntry('end')"><span style="font-size:20px">🏠</span>نهاية اليوم<br><span style="font-size:11px;font-weight:600;opacity:.85">وإنت راجع البيت</span></button>
+      </div>
+      <!-- entry panel (hidden until button pressed) -->
+      <div id="odoEntryPanel" class="hidden">
+        <div id="odoEntryTitle" style="font-weight:800;color:var(--green-d);margin-bottom:10px;font-size:15px"></div>
+        <div class="odo-reading">
+          <input type="number" id="odoValue" placeholder="اكتب رقم العداد" min="0">
+        </div>
+        <p class="muted" style="margin-bottom:8px;font-size:13px">📸 بعد ما تكتب الرقم، صوّر العداد للتأكيد:</p>
+        <input type="file" id="odoCamera" accept="image/*" class="hidden" onchange="odoPhotoSelected(event)">
+        <button class="btn sec block" onclick="openCamera('odoCamera')">📷 التقاط صورة العداد</button>
+        <img id="odoPreview" class="odo-preview" alt="صورة العداد">
+        <div id="odoPhotoStatus" class="muted" style="font-size:13px;margin-top:4px"></div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn block" onclick="saveOdoEntry()">💾 حفظ القراءة</button>
+          <button class="btn gray" onclick="cancelOdoEntry()">إلغاء</button>
+        </div>
+      </div>
+      <!-- today summary -->
+      <div id="odoTodaySummary" class="hidden">
+        <div class="km-result">
+          <div class="km-n" id="odoKmNum">—</div>
+          <div class="km-l">كيلومتر النهارده</div>
+        </div>
+      </div>
+      <!-- history -->
+      <div id="odoHistory" class="odo-history" style="margin-top:12px"></div>
+    </div>
+    <div class="card" style="border:2px solid #3b82f6;background:linear-gradient(135deg,#eff6ff,#fff)">
+      <h2 style="color:#1d4ed8">🤝 تسجيل زيارة عميل</h2>
+      <p class="muted" style="margin-bottom:12px">سجّل بيانات كل عميل بتزوره — هتتحفظ مع تقرير الأسبوع.</p>
+      <div id="visitPanel">
+        <div class="field"><label>اسم العميل *</label><input id="vName" type="text" placeholder="الاسم بالكامل"></div>
+        <div class="field"><label>رقم التليفون</label><input id="vPhone" type="tel" placeholder="01xxxxxxxxx"></div>
+        <div class="field"><label>ملاحظات / تفاصيل الزيارة</label><textarea id="vNotes" rows="3" placeholder="اكتب أي تفاصيل مهمة عن الزيارة..." style="resize:vertical"></textarea></div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+          <button class="btn sec sm" onclick="captureVisitLoc()">📍 تسجيل موقعي الحالي</button>
+          <span id="vLocLabel" class="muted" style="font-size:13px;align-self:center">لم يتم تسجيل الموقع</span>
+        </div>
+        <input type="file" id="vCamera" accept="image/*" class="hidden" onchange="visitPhotoSelected(event)">
+        <button class="btn sec sm block" style="margin-bottom:8px" onclick="openCamera('vCamera')">📷 صوّر مكان العميل (اختياري)</button>
+        <img id="vPhotoPreview" class="odo-preview" alt="صورة مكان العميل" style="max-height:160px">
+        <button class="btn block" style="margin-top:12px;background:#1d4ed8" onclick="saveVisit()">💾 حفظ الزيارة</button>
+      </div>
+      <div id="visitTodayList" class="odo-history" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <h2>📤 تقرير الأسبوع للإدارة</h2>
+      <p class="muted" style="margin-bottom:12px">آخر يوم في الأسبوع، اضغط الزرار وابعت الملف على الواتس/الإيميل للإدارة عشان يتسجّل عندهم.</p>
+      <button class="btn block sec" onclick="workerExportWeek()">تصدير تقرير الأسبوع</button>
+    </div>
+  </div>
+</div>
+
+<!-- image modal -->
+<div id="imgModal" class="img-modal" onclick="this.classList.remove('open')">
+  <img id="imgModalSrc" src="" alt="">
+</div>
+
+<!-- ============ ADMIN VIEW ============ -->
+<div id="adminView" class="hidden">
+  <header>
+    <div class="brand"><span class="logo">🚜</span> متابعة العمالة الميدانية</div>
+    <div class="who"><span>الإدارة</span><button class="logout" onclick="logout()">خروج</button></div>
+  </header>
+  <div class="wrap">
+    <div class="tabs">
+      <button data-tab="today" class="active" onclick="switchTab('today')">📅 لوحة اليوم</button>
+      <button data-tab="records" onclick="switchTab('records')">📋 الحضور</button>
+      <button data-tab="visits" onclick="switchTab('visits')">🤝 الزيارات</button>
+      <button data-tab="odometer" onclick="switchTab('odometer')">🚗 العداد</button>
+      <button data-tab="workers" onclick="switchTab('workers')">👥 العمال</button>
+      <button data-tab="farms" onclick="switchTab('farms')">🌾 المزارع</button>
+      <button data-tab="reports" onclick="switchTab('reports')">📊 التقارير</button>
+      <button data-tab="map" onclick="switchTab('map')">🗺️ الخريطة</button>
+      <button data-tab="settings" onclick="switchTab('settings')">⚙️ الإعدادات</button>
+    </div>
+
+    <!-- TODAY -->
+    <div id="tab-today" class="tab-pane">
+      <div class="stats" id="todayStats"></div>
+      <div class="card">
+        <h2>📅 حضور اليوم <span id="todayDate" class="muted" style="font-weight:600"></span></h2>
+        <div class="tbl-wrap"><table id="todayTbl"></table></div>
+      </div>
+    </div>
+
+    <!-- VISITS -->
+    <div id="tab-visits" class="tab-pane hidden">
+      <div class="card">
+        <h2>🤝 سجل زيارات العملاء</h2>
+        <div class="toolbar">
+          <div class="field"><label>من تاريخ</label><input id="vfFrom" type="date" onchange="renderAdminVisits()"></div>
+          <div class="field"><label>إلى تاريخ</label><input id="vfTo" type="date" onchange="renderAdminVisits()"></div>
+          <div class="field"><label>العامل</label><select id="vfWorker" onchange="renderAdminVisits()"></select></div>
+          <button class="btn sec sm" onclick="exportVisitsExcel()">⬇️ تصدير Excel</button>
+        </div>
+        <div class="tbl-wrap"><table id="visitAdminTbl"></table></div>
+      </div>
+    </div>
+
+    <!-- ODOMETER -->
+    <div id="tab-odometer" class="tab-pane hidden">
+      <div class="card">
+        <h2>🚗 سجل عدادات العربيات</h2>
+        <div class="toolbar">
+          <div class="field"><label>من تاريخ</label><input id="ofFrom" type="date" onchange="renderAdminOdo()"></div>
+          <div class="field"><label>إلى تاريخ</label><input id="ofTo" type="date" onchange="renderAdminOdo()"></div>
+          <div class="field"><label>العامل</label><select id="ofWorker" onchange="renderAdminOdo()"></select></div>
+          <button class="btn sec sm" onclick="exportOdoExcel()">⬇️ تصدير Excel</button>
+        </div>
+        <div class="tbl-wrap"><table id="odoAdminTbl"></table></div>
+        <p class="muted" style="margin-top:10px">💡 الكيلومترات = قراءة النهاية ناقص قراءة البداية لنفس اليوم. اضغط على أي صورة لتكبيرها للتحقق.</p>
+      </div>
+    </div>
+
+    <!-- RECORDS -->
+    <div id="tab-records" class="tab-pane hidden">
+      <div class="card">
+        <h2>➕ تسجيل يدوي (للمشرف)</h2>
+        <div class="row">
+          <div class="field"><label>العامل</label><select id="mWorker"></select></div>
+          <div class="field"><label>النوع</label><select id="mType"><option value="in">حضور</option><option value="out">انصراف</option></select></div>
+          <div class="field"><label>التاريخ والوقت</label><input id="mTime" type="datetime-local"></div>
+        </div>
+        <div class="row" style="align-items:center">
+          <button class="btn sec sm" onclick="captureManualLoc()">📍 التقاط موقعي الحالي</button>
+          <span id="mLocLabel" class="muted">لم يتم التقاط موقع</span>
+        </div>
+        <div style="margin-top:12px"><button class="btn" onclick="addManualRecord()">حفظ التسجيل</button></div>
+      </div>
+      <div class="card">
+        <h2>📋 كل السجلات</h2>
+        <div class="toolbar">
+          <div class="field"><label>من تاريخ</label><input id="fFrom" type="date" onchange="renderRecords()"></div>
+          <div class="field"><label>إلى تاريخ</label><input id="fTo" type="date" onchange="renderRecords()"></div>
+          <div class="field"><label>العامل</label><select id="fWorker" onchange="renderRecords()"></select></div>
+          <div class="field"><label>الموقع</label><select id="fRange" onchange="renderRecords()"><option value="">الكل</option><option value="in">داخل النطاق</option><option value="out">خارج النطاق</option></select></div>
+          <button class="btn sec sm" onclick="exportRecordsExcel()">⬇️ تصدير Excel</button>
+        </div>
+        <div class="tbl-wrap"><table id="recTbl"></table></div>
+      </div>
+    </div>
+
+    <!-- WORKERS -->
+    <div id="tab-workers" class="tab-pane hidden">
+      <div class="card">
+        <h2>👥 إضافة / تعديل عامل</h2>
+        <input type="hidden" id="wEditId">
+        <div class="row">
+          <div class="field"><label>الاسم</label><input id="wfName" type="text" placeholder="اسم العامل"></div>
+          <div class="field"><label>كود الموظف</label><input id="wfCode" type="text" placeholder="مثال: 1024"></div>
+          <div class="field"><label>التليفون</label><input id="wfPhone" type="text" placeholder="اختياري"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>الإدارة / القسم</label><input id="wfDept" type="text" placeholder="اختياري"></div>
+          <div class="field"><label>المزرعة المخصصة</label><select id="wfFarm"></select></div>
+        </div>
+        <button class="btn" onclick="saveWorker()">حفظ</button>
+        <button class="btn gray" id="wCancelBtn" onclick="resetWorkerForm()" style="display:none">إلغاء التعديل</button>
+        <span class="muted" style="margin-right:10px">— أو استورد دفعة واحدة:</span>
+        <button class="btn sec sm" onclick="document.getElementById('wImportFile').click()">📥 استيراد من Excel</button>
+        <input type="file" id="wImportFile" accept=".xlsx,.xls" class="hidden" onchange="importWorkers(event)">
+        <button class="btn gray sm" onclick="downloadWorkerTemplate()">📄 نموذج فاضي</button>
+      </div>
+      <div class="card">
+        <h2>قائمة العمال (<span id="wCount">0</span>)</h2>
+        <div class="tbl-wrap"><table id="wTbl"></table></div>
+      </div>
+    </div>
+
+    <!-- FARMS -->
+    <div id="tab-farms" class="tab-pane hidden">
+      <div class="card">
+        <h2>🌾 إضافة / تعديل مزرعة</h2>
+        <input type="hidden" id="fEditId">
+        <div class="row">
+          <div class="field"><label>اسم المزرعة / الموقع</label><input id="ffName" type="text" placeholder="مثال: مزرعة السادات 1"></div>
+          <div class="field"><label>نطاق السماح (متر)</label><input id="ffRadius" type="number" value="300" min="20"></div>
+        </div>
+        <div class="field">
+          <label>📋 الصق هنا الإحداثيات أو لينك خرائط جوجل (وهنفهمها لوحدنا)</label>
+          <input id="ffPaste" type="text" placeholder="مثال: 30.123456, 31.123456 — أو الصق لينك Google Maps" oninput="parseCoordsPaste()">
+          <span id="ffPasteStatus" class="muted"></span>
+        </div>
+        <div class="row">
+          <div class="field"><label>خط العرض (Latitude)</label><input id="ffLat" type="number" step="any" placeholder="30.123456"></div>
+          <div class="field"><label>خط الطول (Longitude)</label><input id="ffLng" type="number" step="any" placeholder="31.123456"></div>
+        </div>
+        <button class="btn sec sm" onclick="captureFarmLoc()">📍 ضبط الإحداثيات من موقعي الحالي</button>
+        <div style="margin-top:12px">
+          <button class="btn" onclick="saveFarm()">حفظ</button>
+          <button class="btn gray" id="fCancelBtn" onclick="resetFarmForm()" style="display:none">إلغاء التعديل</button>
+        </div>
+        <p class="muted" style="margin-top:10px">💡 افتح خرائط جوجل في موقع المزرعة، اضغط مطوّل على المكان، وانسخ الإحداثيات.</p>
+      </div>
+      <div class="card">
+        <h2>قائمة المزارع (<span id="fCount">0</span>)</h2>
+        <div class="tbl-wrap"><table id="fTbl"></table></div>
+      </div>
+    </div>
+
+    <!-- REPORTS -->
+    <div id="tab-reports" class="tab-pane hidden">
+      <div class="card">
+        <h2>📊 تقرير شهري</h2>
+        <div class="toolbar">
+          <div class="field"><label>الشهر</label><input id="rMonth" type="month" onchange="renderReport()"></div>
+          <button class="btn sec sm" onclick="exportReportExcel()">⬇️ تصدير Excel</button>
+        </div>
+        <div class="tbl-wrap"><table id="repTbl"></table></div>
+        <p class="muted" style="margin-top:10px">عدد الأيام = الأيام اللي فيها تسجيل حضور. الساعات = الفرق بين أول حضور وآخر انصراف في اليوم.</p>
+      </div>
+    </div>
+
+    <!-- MAP -->
+    <div id="tab-map" class="tab-pane hidden">
+      <div class="card">
+        <h2>🗺️ خريطة التسجيلات</h2>
+        <div class="toolbar">
+          <div class="field"><label>اليوم</label><input id="mapDate" type="date" onchange="renderMap()"></div>
+          <span class="muted">🟢 داخل النطاق &nbsp; 🟠 خارج النطاق &nbsp; 🚩 مزرعة</span>
+        </div>
+        <div id="map"></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="tab-settings" class="tab-pane hidden">
+      <div class="card">
+        <h2>📥 استيراد سجلات العمال</h2>
+        <p class="muted" style="margin-bottom:12px">لو العمال بعتولك ملفات سجلاتهم (من زرار «تصدير سجلاتي»)، استوردها هنا ليتسجّلوا عندك.</p>
+        <button class="btn sec" onclick="document.getElementById('recImportFile').click()">📥 استيراد ملف سجلات</button>
+        <input type="file" id="recImportFile" accept=".json" class="hidden" onchange="importRecords(event)">
+        <div id="importPreview" class="hidden" style="margin-top:16px">
+          <div id="ipInfo" style="font-weight:800;color:var(--green-d);margin-bottom:10px;font-size:15px"></div>
+          <div class="tbl-wrap"><table id="ipTbl"></table></div>
+          <div style="margin-top:12px;display:flex;gap:8px">
+            <button class="btn" onclick="confirmImport()">✔️ تأكيد الاستيراد</button>
+            <button class="btn gray" onclick="cancelImport()">إلغاء</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>🔐 تغيير كلمة المرور</h2>
+        <div class="row">
+          <div class="field"><label>كلمة المرور الجديدة</label><input id="newPass" type="password"></div>
+        </div>
+        <button class="btn" onclick="changePass()">تحديث</button>
+      </div>
+      <div class="card">
+        <h2>💾 نسخة احتياطية</h2>
+        <button class="btn sec" onclick="backupAll()">⬇️ تنزيل نسخة احتياطية كاملة</button>
+        <button class="btn sec" onclick="document.getElementById('restoreFile').click()">📥 استعادة نسخة</button>
+        <input type="file" id="restoreFile" accept=".json" class="hidden" onchange="restoreAll(event)">
+      </div>
+      <div class="card">
+        <h2 style="color:var(--red)">⚠️ منطقة الخطر</h2>
+        <button class="btn red" onclick="clearAllData()">حذف كل البيانات</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ================= DATA LAYER ================= */
+const DB = {
+  workers:'fwa_workers', farms:'fwa_farms', records:'fwa_records', pass:'fwa_pass', odo:'fwa_odo', visits:'fwa_visits'
+};
+function load(k){ try{ return JSON.parse(localStorage.getItem(k)||'[]'); }catch(e){ return []; } }
+function save(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+let workers = load(DB.workers);
+let farms   = load(DB.farms);
+let records = load(DB.records);
+let odoReadings = load(DB.odo);
+let visits  = load(DB.visits);
+let currentWorker = null;
+let manualLoc = null;
+let currentOdoType = null;
+let odoPhotoDataUrl = null;
+let visitLoc = null;
+let visitPhotoDataUrl = null;
+
+if(!localStorage.getItem(DB.pass)) localStorage.setItem(DB.pass,'admin');
+
+/* ================= HELPERS ================= */
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none',2600); }
+function pad(n){ return n<10?'0'+n:''+n; }
+function fmtDateTime(ts){ const d=new Date(ts); return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear()+' '+pad(d.getHours())+':'+pad(d.getMinutes()); }
+function fmtTime(ts){ const d=new Date(ts); return pad(d.getHours())+':'+pad(d.getMinutes()); }
+function dayKey(ts){ const d=new Date(ts); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function todayKey(){ return dayKey(Date.now()); }
+function workerById(id){ return workers.find(w=>w.id===id); }
+function farmById(id){ return farms.find(f=>f.id===id); }
+
+function haversine(lat1,lng1,lat2,lng2){
+  const R=6371000, toR=x=>x*Math.PI/180;
+  const dLat=toR(lat2-lat1), dLng=toR(lng2-lng1);
+  const a=Math.sin(dLat/2)**2 + Math.cos(toR(lat1))*Math.cos(toR(lat2))*Math.sin(dLng/2)**2;
+  return Math.round(R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)));
+}
+function getLocation(){
+  return new Promise((resolve,reject)=>{
+    if(!navigator.geolocation){ reject(new Error('الجهاز لا يدعم تحديد الموقع')); return; }
+    navigator.geolocation.getCurrentPosition(
+      p=>resolve({lat:p.coords.latitude,lng:p.coords.longitude,accuracy:Math.round(p.coords.accuracy)}),
+      e=>{
+        let m='تعذّر تحديد الموقع';
+        if(e.code===1) m='لازم تسمح للموقع (Location) في المتصفح';
+        else if(e.code===3) m='انتهت مهلة تحديد الموقع، حاول تاني';
+        reject(new Error(m));
+      },
+      {enableHighAccuracy:true,timeout:15000,maximumAge:0}
+    );
+  });
+}
+
+/* ================= ENTRY / AUTH ================= */
+function showWorkerEntry(){ document.getElementById('workerEntry').classList.remove('hidden'); document.getElementById('adminLogin').classList.add('hidden'); document.getElementById('wCode').focus(); }
+function showAdminLogin(){ document.getElementById('adminLogin').classList.remove('hidden'); document.getElementById('workerEntry').classList.add('hidden'); document.getElementById('aPass').focus(); }
+function backToEntry(){ document.getElementById('workerEntry').classList.add('hidden'); document.getElementById('adminLogin').classList.add('hidden'); }
+
+function workerLogin(){
+  const code=document.getElementById('wCode').value.trim();
+  if(!code){ toast('اكتب الكود'); return; }
+  let w=workers.find(x=>String(x.code).trim()===code);
+  if(!w){
+    const nameField=document.getElementById('wNameField');
+    const newName=document.getElementById('wNewName').value.trim();
+    if(nameField.classList.contains('hidden')){
+      nameField.classList.remove('hidden');
+      document.getElementById('wNewName').focus();
+      toast('أول مرة من الموبايل ده — اكتب اسمك تحت الكود');
+      return;
+    }
+    if(!newName){ toast('اكتب اسمك بالكامل'); return; }
+    w={id:uid(),name:newName,code,phone:'',dept:'',farmId:null};
+    workers.push(w); save(DB.workers,workers);
+  }
+  currentWorker=w;
+  document.getElementById('entry').classList.add('hidden');
+  document.getElementById('adminView').classList.add('hidden');
+  document.getElementById('workerView').classList.remove('hidden');
+  document.getElementById('wHeaderName').textContent=w.name;
+  document.getElementById('wName').textContent=w.name;
+  const farm=w.farmId?farmById(w.farmId):null;
+  document.getElementById('wSub').textContent='كود: '+w.code+(farm?' — مزرعة: '+farm.name:'');
+  renderWorkerToday();
+  renderWorkerOdoToday();
+  renderVisitTodayList();
+}
+function adminLogin(){
+  const p=document.getElementById('aPass').value;
+  if(p!==localStorage.getItem(DB.pass)){ toast('كلمة المرور غلط'); return; }
+  document.getElementById('entry').classList.add('hidden');
+  document.getElementById('workerView').classList.add('hidden');
+  document.getElementById('adminView').classList.remove('hidden');
+  initAdmin();
+}
+function logout(){ currentWorker=null; location.reload(); }
+
+/* ================= WORKER FLOW ================= */
+function wMsg(type,text){ const e=document.getElementById('wStatus'); e.className='status-msg '+type; e.textContent=text; }
+
+async function workerRecord(type){
+  const btns=document.querySelectorAll('.big-btns button'); btns.forEach(b=>b.disabled=true);
+  wMsg('info','⏳ بنحدد موقعك... سيب الموبايل لحظة');
+  let loc=null, err=null;
+  try{ loc=await getLocation(); }catch(e){ err=e.message; }
+  if(!loc){
+    wMsg('err','❌ '+err+' — لازم نحدد موقعك عشان نسجّل');
+    btns.forEach(b=>b.disabled=false); return;
+  }
+  loc.ts=Date.now();
+  records.push({
+    id:uid(), workerId:currentWorker.id, type, timestamp:loc.ts,
+    lat:loc.lat, lng:loc.lng, accuracy:loc.accuracy,
+    farmId:null, distance:null, inRange:null, source:'self', note:''
+  });
+  save(DB.records,records);
+  renderWorkerToday();
+  const mapsLink='https://maps.google.com/?q='+loc.lat+','+loc.lng;
+  wMsg('ok','✔️ اتسجّل '+(type==='in'?'الحضور':'الانصراف')+' الساعة '+fmtTime(loc.ts)+' 📍 <a href="'+mapsLink+'" target="_blank" style="color:var(--green-d);font-weight:800">عرض الموقع</a>');
+  btns.forEach(b=>b.disabled=false);
+}
+function saveRecordChecked(worker,type,loc,info,source){
+  records.push({
+    id:uid(), workerId:worker.id, type, timestamp:loc.ts||Date.now(),
+    lat:loc.lat, lng:loc.lng, accuracy:loc.accuracy,
+    farmId:info?info.farm.id:null, distance:info?info.distance:null, inRange:info?info.inRange:null, source, note:''
+  });
+  save(DB.records,records);
+}
+function renderWorkerToday(){
+  const tk=todayKey();
+  const mine=records.filter(r=>r.workerId===currentWorker.id && dayKey(r.timestamp)===tk).sort((a,b)=>a.timestamp-b.timestamp);
+  const box=document.getElementById('wToday');
+  if(!mine.length){ box.innerHTML='<div class="muted" style="text-align:center">لسه مفيش تسجيل النهارده</div>'; return; }
+  box.innerHTML='<div style="font-weight:700;margin-bottom:6px">تسجيلات النهارده</div>'+mine.map(r=>{
+    const loc=r.lat!=null?'<a href="https://maps.google.com/?q='+r.lat+','+r.lng+'" target="_blank" style="color:var(--green);font-size:12px">📍 موقع</a>':'<span class="badge none">بدون موقع</span>';
+    return '<div class="ln"><span>'+(r.type==='in'?'🟢 حضور':'🟠 انصراف')+' '+fmtTime(r.timestamp)+'</span>'+loc+'</div>';
+  }).join('');
+}
+function workerExportWeek(){
+  const since=Date.now()-7*24*3600000;
+  const mine=records.filter(r=>r.workerId===currentWorker.id && r.timestamp>=since);
+  const myOdo=odoReadings.filter(r=>r.workerId===currentWorker.id && r.timestamp>=since);
+  const myVisits=visits.filter(r=>r.workerId===currentWorker.id && r.timestamp>=since);
+  if(!mine.length && !myOdo.length && !myVisits.length){ toast('مفيش تسجيلات في آخر أسبوع'); return; }
+  const payload={type:'fwa_worker_records',worker:{id:currentWorker.id,name:currentWorker.name,code:currentWorker.code},records:mine,odoReadings:myOdo,visits:myVisits,exportedAt:Date.now()};
+  downloadJSON(payload,'تقرير_اسبوعي_'+currentWorker.name+'_'+todayKey()+'.json');
+  toast('اتصدّر — ابعت الملف للإدارة');
+}
+
+/* ================= CAMERA FIX ================= */
+// بدل capture attribute اللي بيتعارض مع بعض الأجهزة، بنفتح الكاميرا برمجياً
+function openCamera(inputId){
+  const el=document.getElementById(inputId);
+  // reset value عشان لو نفس الصورة يشتغل onChange
+  el.value=''; el.click();
+}
+
+/* ================= VISITS - WORKER SIDE ================= */
+async function captureVisitLoc(){
+  document.getElementById('vLocLabel').textContent='⏳ بنحدد الموقع...';
+  try{
+    const loc=await getLocation();
+    visitLoc=loc;
+    document.getElementById('vLocLabel').textContent='📍 '+loc.lat.toFixed(5)+', '+loc.lng.toFixed(5)+' (±'+loc.accuracy+'م)';
+    document.getElementById('vLocLabel').style.color='var(--green-d)';
+  }catch(e){
+    visitLoc=null;
+    document.getElementById('vLocLabel').textContent='⚠️ '+e.message;
+    document.getElementById('vLocLabel').style.color='var(--red)';
+  }
+}
+function visitPhotoSelected(ev){
+  const file=ev.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    visitPhotoDataUrl=e.target.result;
+    const prev=document.getElementById('vPhotoPreview');
+    prev.src=visitPhotoDataUrl; prev.style.display='block';
+  };
+  reader.readAsDataURL(file);
+}
+function saveVisit(){
+  const name=document.getElementById('vName').value.trim();
+  if(!name){ toast('اكتب اسم العميل'); return; }
+  const v={
+    id:uid(), workerId:currentWorker.id,
+    clientName:name,
+    phone:document.getElementById('vPhone').value.trim(),
+    notes:document.getElementById('vNotes').value.trim(),
+    lat:visitLoc?visitLoc.lat:null, lng:visitLoc?visitLoc.lng:null,
+    accuracy:visitLoc?visitLoc.accuracy:null,
+    photo:visitPhotoDataUrl||null,
+    timestamp:Date.now(), day:todayKey()
+  };
+  visits.push(v); save(DB.visits,visits);
+  // reset
+  document.getElementById('vName').value='';
+  document.getElementById('vPhone').value='';
+  document.getElementById('vNotes').value='';
+  document.getElementById('vPhotoPreview').style.display='none';
+  document.getElementById('vPhotoPreview').src='';
+  document.getElementById('vLocLabel').textContent='لم يتم تسجيل الموقع';
+  document.getElementById('vLocLabel').style.color='';
+  visitLoc=null; visitPhotoDataUrl=null;
+  document.getElementById('vCamera').value='';
+  renderVisitTodayList();
+  toast('اتحفظت الزيارة ✔️');
+}
+function renderVisitTodayList(){
+  const tk=todayKey();
+  const mine=visits.filter(r=>r.workerId===currentWorker.id && r.day===tk).sort((a,b)=>b.timestamp-a.timestamp);
+  const box=document.getElementById('visitTodayList');
+  if(!mine.length){ box.innerHTML=''; return; }
+  box.innerHTML='<div style="font-weight:700;margin-bottom:8px;font-size:14px;color:#1d4ed8">زيارات النهارده ('+mine.length+')</div>'+
+    mine.map(v=>{
+      const locLink=v.lat?'<a href="https://maps.google.com/?q='+v.lat+','+v.lng+'" target="_blank" style="color:#1d4ed8;font-size:12px">📍 موقع</a>':'';
+      const thumb=v.photo?'<img class="odo-thumb" src="'+v.photo+'" onclick="openImgSrc(\''+v.id+'\')" alt="" style="border-color:#bfdbfe">':'';
+      return '<div class="oh-row" style="flex-wrap:wrap;gap:6px">'+
+        '<div><b>'+v.clientName+'</b>'+(v.phone?' — '+v.phone:'')+'<br><span class="muted" style="font-size:12px">'+fmtTime(v.timestamp)+(v.notes?' — '+v.notes.slice(0,40)+(v.notes.length>40?'...':''):'')+'</span></div>'+
+        '<div style="display:flex;gap:6px;align-items:center">'+locLink+' '+thumb+'</div></div>';
+    }).join('');
+}
+function openImgSrc(visitId){
+  const v=visits.find(x=>x.id===visitId); if(!v||!v.photo) return;
+  document.getElementById('imgModalSrc').src=v.photo;
+  document.getElementById('imgModal').classList.add('open');
+}
+
+/* ================= ODOMETER - WORKER SIDE ================= */
+function startOdoEntry(type){
+  currentOdoType=type; odoPhotoDataUrl=null;
+  document.getElementById('odoEntryTitle').textContent=(type==='start'?'🏁 بداية اليوم — قراءة العداد الآن':'🏠 نهاية اليوم — قراءة العداد الآن');
+  document.getElementById('odoValue').value='';
+  const prev=document.getElementById('odoPreview'); prev.style.display='none'; prev.src='';
+  document.getElementById('odoPhotoStatus').textContent='';
+  document.getElementById('odoCamera').value='';
+  document.getElementById('odoEntryPanel').classList.remove('hidden');
+  document.getElementById('odoValue').focus();
+}
+function cancelOdoEntry(){
+  document.getElementById('odoEntryPanel').classList.add('hidden');
+  currentOdoType=null; odoPhotoDataUrl=null;
+}
+function odoPhotoSelected(ev){
+  const file=ev.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    odoPhotoDataUrl=e.target.result;
+    const prev=document.getElementById('odoPreview');
+    prev.src=odoPhotoDataUrl; prev.style.display='block';
+    document.getElementById('odoPhotoStatus').textContent='✔️ الصورة جاهزة';
+  };
+  reader.readAsDataURL(file);
+}
+function saveOdoEntry(){
+  const val=parseInt(document.getElementById('odoValue').value);
+  if(isNaN(val)||val<0){ toast('اكتب رقم العداد الصح'); return; }
+  if(!odoPhotoDataUrl){ toast('لازم تصوّر العداد الأول'); return; }
+  const entry={id:uid(), workerId:currentWorker.id, type:currentOdoType, value:val, photo:odoPhotoDataUrl, timestamp:Date.now(), day:todayKey()};
+  odoReadings.push(entry); save(DB.odo, odoReadings);
+  cancelOdoEntry();
+  renderWorkerOdoToday();
+  toast('اتحفظت قراءة العداد ✔️');
+}
+function renderWorkerOdoToday(){
+  const tk=todayKey();
+  const mine=odoReadings.filter(r=>r.workerId===currentWorker.id && r.day===tk).sort((a,b)=>a.timestamp-b.timestamp);
+  const hist=document.getElementById('odoHistory');
+  const sumDiv=document.getElementById('odoTodaySummary');
+  if(!mine.length){ hist.innerHTML='<div class="muted" style="text-align:center;padding:8px">لسه مفيش قراءات النهارده</div>'; sumDiv.classList.add('hidden'); return; }
+  const startR=mine.find(r=>r.type==='start');
+  const endR=mine.slice().reverse().find(r=>r.type==='end');
+  if(startR&&endR&&endR.value>startR.value){
+    document.getElementById('odoKmNum').textContent=(endR.value-startR.value).toLocaleString('ar-EG');
+    sumDiv.classList.remove('hidden');
+  } else { sumDiv.classList.add('hidden'); }
+  hist.innerHTML='<div style="font-weight:700;margin-bottom:6px;font-size:14px">قراءات النهارده</div>'+mine.map(r=>{
+    const thumb=r.photo?'<img class="odo-thumb" src="'+r.photo+'" onclick="openImg(\''+r.id+'\')" alt="">':'—';
+    return '<div class="oh-row"><span>'+(r.type==='start'?'🏁 بداية':'🏠 نهاية')+' '+fmtTime(r.timestamp)+'</span><b>'+r.value.toLocaleString('ar-EG')+' كم</b>'+thumb+'</div>';
+  }).join('');
+}
+function openImg(odoId){
+  const r=odoReadings.find(x=>x.id===odoId); if(!r||!r.photo) return;
+  document.getElementById('imgModalSrc').src=r.photo;
+  document.getElementById('imgModal').classList.add('open');
+}
+
+/* ================= ADMIN ================= */
+function initAdmin(){
+  workers=load(DB.workers); farms=load(DB.farms); records=load(DB.records); odoReadings=load(DB.odo); visits=load(DB.visits);
+  document.getElementById('rMonth').value=todayKey().slice(0,7);
+  document.getElementById('mapDate').value=todayKey();
+  document.getElementById('mTime').value=nowLocalInput();
+  const today=todayKey();
+  document.getElementById('ofFrom').value=today; document.getElementById('ofTo').value=today;
+  document.getElementById('vfFrom').value=today; document.getElementById('vfTo').value=today;
+  refreshAll();
+  switchTab('today');
+}
+function nowLocalInput(){ const d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes()); }
+function refreshAll(){
+  fillWorkerSelects(); fillFarmSelects();
+  renderToday(); renderRecords(); renderWorkers(); renderFarms(); renderReport(); renderAdminOdo(); renderAdminVisits();
+}
+let mapInited=false, leafMap=null, mapLayer=null;
+function switchTab(tab){
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.add('hidden'));
+  document.getElementById('tab-'+tab).classList.remove('hidden');
+  if(tab==='today') renderToday();
+  if(tab==='map') renderMap();
+  if(tab==='odometer') renderAdminOdo();
+  if(tab==='visits') renderAdminVisits();
+}
+
+/* ---- selects ---- */
+function fillWorkerSelects(){
+  const opts='<option value="">— اختر —</option>'+workers.map(w=>'<option value="'+w.id+'">'+w.name+' ('+w.code+')</option>').join('');
+  document.getElementById('mWorker').innerHTML=opts;
+  const allOpt='<option value="">كل العمال</option>'+workers.map(w=>'<option value="'+w.id+'">'+w.name+'</option>').join('');
+  document.getElementById('fWorker').innerHTML=allOpt;
+  document.getElementById('ofWorker').innerHTML=allOpt;
+  document.getElementById('vfWorker').innerHTML=allOpt;
+}
+
+/* ================= VISITS - ADMIN SIDE ================= */
+function renderAdminVisits(){
+  const from=document.getElementById('vfFrom').value, to=document.getElementById('vfTo').value;
+  const wf=document.getElementById('vfWorker').value;
+  const filtered=visits.filter(r=>{
+    if(from && r.day<from) return false;
+    if(to && r.day>to) return false;
+    if(wf && r.workerId!==wf) return false;
+    return true;
+  }).sort((a,b)=>b.timestamp-a.timestamp);
+  const rows=filtered.map(v=>{
+    const w=workerById(v.workerId); if(!w) return '';
+    const locCell=v.lat?'<a href="https://maps.google.com/?q='+v.lat+','+v.lng+'" target="_blank" style="color:var(--green)">📍 خريطة</a>':'—';
+    const thumb=v.photo?'<img class="odo-thumb" src="'+v.photo+'" onclick="openImgSrc(\''+v.id+'\')" alt="">':'—';
+    const dayNum=parseInt(v.day.slice(8),10);
+    return '<tr><td>'+w.name+'</td><td>'+w.code+'</td><td>'+dayNum+'/'+v.day.slice(0,7)+'</td><td>'+fmtTime(v.timestamp)+'</td>'+
+      '<td><b>'+v.clientName+'</b></td><td>'+(v.phone||'—')+'</td><td style="max-width:220px;white-space:normal">'+(v.notes||'—')+'</td>'+
+      '<td>'+locCell+'</td><td>'+thumb+'</td></tr>';
+  }).join('');
+  document.getElementById('visitAdminTbl').innerHTML=
+    '<thead><tr><th>العامل</th><th>الكود</th><th>اليوم</th><th>الوقت</th><th>اسم العميل</th><th>التليفون</th><th>الملاحظات</th><th>الموقع</th><th>الصورة</th></tr></thead><tbody>'+
+    (rows||'<tr><td colspan="9" class="empty">لا توجد زيارات في الفترة دي</td></tr>')+'</tbody>';
+}
+function exportVisitsExcel(){
+  const from=document.getElementById('vfFrom').value, to=document.getElementById('vfTo').value;
+  const wf=document.getElementById('vfWorker').value;
+  const filtered=visits.filter(r=>{
+    if(from && r.day<from) return false;
+    if(to && r.day>to) return false;
+    if(wf && r.workerId!==wf) return false;
+    return true;
+  }).sort((a,b)=>b.timestamp-a.timestamp);
+  const aoa=[['العامل','الكود','اليوم','الوقت','اسم العميل','التليفون','الملاحظات','Latitude','Longitude']];
+  filtered.forEach(v=>{ const w=workerById(v.workerId); if(!w)return;
+    aoa.push([w.name,w.code,v.day,fmtTime(v.timestamp),v.clientName,v.phone||'',v.notes||'',v.lat||'',v.lng||'']);
+  });
+  const ws=XLSX.utils.aoa_to_sheet(aoa); const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'الزيارات'); XLSX.writeFile(wb,'زيارات_عملاء_'+todayKey()+'.xlsx');
+}
+function renderAdminOdo(){
+  const from=document.getElementById('ofFrom').value, to=document.getElementById('ofTo').value;
+  const wf=document.getElementById('ofWorker').value;
+  const filtered=odoReadings.filter(r=>{
+    if(from && r.day<from) return false;
+    if(to && r.day>to) return false;
+    if(wf && r.workerId!==wf) return false;
+    return true;
+  });
+  // group by workerId + day
+  const groups={};
+  filtered.forEach(r=>{
+    const k=r.workerId+'|'+r.day;
+    (groups[k]=groups[k]||{workerId:r.workerId,day:r.day,entries:[]}).entries.push(r);
+  });
+  const rows=Object.values(groups).sort((a,b)=>b.day.localeCompare(a.day)||(a.workerId>b.workerId?1:-1)).map(g=>{
+    const w=workerById(g.workerId); if(!w) return '';
+    const entries=g.entries.sort((a,b)=>a.timestamp-b.timestamp);
+    const startR=entries.find(r=>r.type==='start');
+    const endR=[...entries].reverse().find(r=>r.type==='end');
+    const startVal=startR?startR.value:'—';
+    const endVal=endR?endR.value:'—';
+    const km=(startR&&endR&&endR.value>startR.value)?'<b style="color:var(--green-d)">'+(endR.value-startR.value).toLocaleString('ar-EG')+' كم</b>':'—';
+    const dayNum=parseInt(g.day.slice(8),10); const month=g.day.slice(0,7);
+    const startThumb=startR&&startR.photo?'<img class="odo-thumb" src="'+startR.photo+'" onclick="openImg(\''+startR.id+'\')" alt="بداية">':'—';
+    const endThumb=endR&&endR.photo?'<img class="odo-thumb" src="'+endR.photo+'" onclick="openImg(\''+endR.id+'\')" alt="نهاية">':'—';
+    return '<tr><td>'+w.name+'</td><td>'+w.code+'</td><td>'+dayNum+'/'+month+'</td>'+
+      '<td>'+startVal+(startR?' <span class="muted" style="font-size:12px">'+fmtTime(startR.timestamp)+'</span>':'')+'</td>'+
+      '<td>'+endVal+(endR?' <span class="muted" style="font-size:12px">'+fmtTime(endR.timestamp)+'</span>':'')+'</td>'+
+      '<td>'+km+'</td><td>'+startThumb+'</td><td>'+endThumb+'</td></tr>';
+  }).join('');
+  document.getElementById('odoAdminTbl').innerHTML=
+    '<thead><tr><th>العامل</th><th>الكود</th><th>اليوم</th><th>بداية اليوم</th><th>نهاية اليوم</th><th>الكيلومترات</th><th>صورة البداية</th><th>صورة النهاية</th></tr></thead><tbody>'+
+    (rows||'<tr><td colspan="8" class="empty">لا توجد قراءات في الفترة دي</td></tr>')+'</tbody>';
+}
+function exportOdoExcel(){
+  const from=document.getElementById('ofFrom').value, to=document.getElementById('ofTo').value;
+  const wf=document.getElementById('ofWorker').value;
+  const filtered=odoReadings.filter(r=>{
+    if(from && r.day<from) return false;
+    if(to && r.day>to) return false;
+    if(wf && r.workerId!==wf) return false;
+    return true;
+  });
+  const groups={};
+  filtered.forEach(r=>{ const k=r.workerId+'|'+r.day; (groups[k]=groups[k]||{workerId:r.workerId,day:r.day,entries:[]}).entries.push(r); });
+  const aoa=[['العامل','الكود','اليوم','قراءة البداية','وقت البداية','قراءة النهاية','وقت النهاية','الكيلومترات']];
+  Object.values(groups).sort((a,b)=>b.day.localeCompare(a.day)).forEach(g=>{
+    const w=workerById(g.workerId); if(!w) return;
+    const entries=g.entries.sort((a,b)=>a.timestamp-b.timestamp);
+    const startR=entries.find(r=>r.type==='start');
+    const endR=[...entries].reverse().find(r=>r.type==='end');
+    const km=(startR&&endR&&endR.value>startR.value)?(endR.value-startR.value):'';
+    aoa.push([w.name,w.code,g.day,startR?startR.value:'',startR?fmtTime(startR.timestamp):'',endR?endR.value:'',endR?fmtTime(endR.timestamp):'',km]);
+  });
+  const ws=XLSX.utils.aoa_to_sheet(aoa); const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'العدادات'); XLSX.writeFile(wb,'سجل_عدادات_'+todayKey()+'.xlsx');
+}
+function fillFarmSelects(){
+  const opts='<option value="">— بدون —</option>'+farms.map(f=>'<option value="'+f.id+'">'+f.name+'</option>').join('');
+  document.getElementById('wfFarm').innerHTML=opts;
+}
+
+/* ---- TODAY ---- */
+function renderToday(){
+  const tk=todayKey();
+  document.getElementById('todayDate').textContent='('+tk+')';
+  const todays=records.filter(r=>dayKey(r.timestamp)===tk);
+  const presentIds=[...new Set(todays.filter(r=>r.type==='in').map(r=>r.workerId))];
+  const outOfRange=todays.filter(r=>r.inRange===false).length;
+  const absent=workers.length-presentIds.length;
+  document.getElementById('todayStats').innerHTML=
+    stat(workers.length,'إجمالي العمال')+
+    stat(presentIds.length,'حاضر النهارده','')+
+    stat(absent<0?0:absent,'لم يسجّل','bad')+
+    stat(outOfRange,'تسجيلات خارج النطاق','warn');
+
+  const rows=workers.map(w=>{
+    const wr=todays.filter(r=>r.workerId===w.id).sort((a,b)=>a.timestamp-b.timestamp);
+    const ins=wr.filter(r=>r.type==='in'), outs=wr.filter(r=>r.type==='out');
+    const firstIn=ins[0], lastOut=outs[outs.length-1];
+    const present=ins.length>0;
+    let hours='—';
+    if(firstIn && lastOut && lastOut.timestamp>firstIn.timestamp) hours=((lastOut.timestamp-firstIn.timestamp)/3600000).toFixed(1)+' س';
+    const anyOut = wr.some(r=>r.inRange===false);
+    const locBadge = wr.length? (anyOut?'<span class="badge out">خارج النطاق</span>': (wr.some(r=>r.inRange===true)?'<span class="badge in">داخل النطاق</span>':'<span class="badge none">بدون موقع</span>')) : '—';
+    return '<tr><td>'+w.name+'</td><td>'+w.code+'</td>'+
+      '<td>'+(present?'<span class="badge present">حاضر</span>':'<span class="badge absent">لم يسجّل</span>')+'</td>'+
+      '<td>'+(firstIn?fmtTime(firstIn.timestamp):'—')+'</td>'+
+      '<td>'+(lastOut?fmtTime(lastOut.timestamp):'—')+'</td>'+
+      '<td>'+hours+'</td><td>'+locBadge+'</td></tr>';
+  }).join('');
+  document.getElementById('todayTbl').innerHTML=
+    '<thead><tr><th>العامل</th><th>الكود</th><th>الحالة</th><th>أول حضور</th><th>آخر انصراف</th><th>الساعات</th><th>الموقع</th></tr></thead><tbody>'+
+    (rows||'<tr><td colspan="7" class="empty">ضيف عمال الأول من تبويب «العمال»</td></tr>')+'</tbody>';
+}
+function stat(n,l,cls){ return '<div class="stat '+(cls||'')+'"><div class="n">'+n+'</div><div class="l">'+l+'</div></div>'; }
+
+/* ---- RECORDS ---- */
+function captureManualLoc(){
+  document.getElementById('mLocLabel').textContent='⏳ بنحدد الموقع...';
+  getLocation().then(loc=>{ manualLoc=loc; document.getElementById('mLocLabel').textContent='📍 '+loc.lat.toFixed(5)+', '+loc.lng.toFixed(5)+' (±'+loc.accuracy+'م)'; })
+  .catch(e=>{ manualLoc=null; document.getElementById('mLocLabel').textContent='⚠️ '+e.message; });
+}
+function addManualRecord(){
+  const wid=document.getElementById('mWorker').value;
+  if(!wid){ toast('اختر العامل'); return; }
+  const w=workerById(wid);
+  const type=document.getElementById('mType').value;
+  const timeVal=document.getElementById('mTime').value;
+  const ts=timeVal?new Date(timeVal).getTime():Date.now();
+  const loc=manualLoc?{...manualLoc,ts}:{ts};
+  let inRange=null,distance=null,farmId=null;
+  if(manualLoc){ const info=locateAgainstAnyFarm(manualLoc.lat,manualLoc.lng); if(info){distance=info.distance;farmId=info.farm.id;inRange=info.inRange;} }
+  records.push({id:uid(),workerId:w.id,type,timestamp:ts,lat:manualLoc?manualLoc.lat:null,lng:manualLoc?manualLoc.lng:null,accuracy:manualLoc?manualLoc.accuracy:null,farmId,distance,inRange,source:'manual',note:''});
+  save(DB.records,records);
+  manualLoc=null; document.getElementById('mLocLabel').textContent='لم يتم التقاط موقع';
+  document.getElementById('mTime').value=nowLocalInput();
+  toast('اتسجّل ✔️'); renderRecords(); renderToday();
+}
+function getFilteredRecords(){
+  const from=document.getElementById('fFrom').value, to=document.getElementById('fTo').value;
+  const wf=document.getElementById('fWorker').value, rf=document.getElementById('fRange').value;
+  return records.filter(r=>{
+    const dk=dayKey(r.timestamp);
+    if(from && dk<from) return false;
+    if(to && dk>to) return false;
+    if(wf && r.workerId!==wf) return false;
+    if(rf==='in' && r.inRange!==true) return false;
+    if(rf==='out' && r.inRange!==false) return false;
+    return true;
+  }).sort((a,b)=>b.timestamp-a.timestamp);
+}
+function renderRecords(){
+  const rs=getFilteredRecords();
+  const rows=rs.map(r=>{
+    const w=workerById(r.workerId); if(!w) return '';
+    const farm=r.farmId?farmById(r.farmId):null;
+    const loc = r.lat==null?'<span class="badge none">بدون موقع</span>':(r.inRange?'<span class="badge in">داخل النطاق</span>':'<span class="badge out">خارج '+r.distance+'م</span>');
+    const coords = r.lat==null?'—':'<a href="https://maps.google.com/?q='+r.lat+','+r.lng+'" target="_blank" style="color:var(--green)">📍 خريطة</a>';
+    return '<tr><td>'+w.name+'</td><td>'+(r.type==='in'?'🟢 حضور':'🟠 انصراف')+'</td><td>'+fmtDateTime(r.timestamp)+'</td>'+
+      '<td>'+loc+'</td><td>'+(farm?farm.name:'—')+'</td><td>'+(r.source==='self'?'العامل':'يدوي')+'</td><td>'+coords+'</td>'+
+      '<td class="actions"><button class="btn red sm" onclick="delRecord(\''+r.id+'\')">حذف</button></td></tr>';
+  }).join('');
+  document.getElementById('recTbl').innerHTML=
+    '<thead><tr><th>العامل</th><th>النوع</th><th>التاريخ/الوقت</th><th>الموقع</th><th>المزرعة</th><th>المصدر</th><th>إحداثيات</th><th></th></tr></thead><tbody>'+
+    (rows||'<tr><td colspan="8" class="empty">لا توجد سجلات</td></tr>')+'</tbody>';
+}
+function delRecord(id){ if(!confirm('تحذف التسجيل ده؟'))return; records=records.filter(r=>r.id!==id); save(DB.records,records); renderRecords(); renderToday(); }
+
+/* ---- WORKERS ---- */
+function renderWorkers(){
+  document.getElementById('wCount').textContent=workers.length;
+  const rows=workers.map(w=>{
+    const farm=w.farmId?farmById(w.farmId):null;
+    return '<tr><td>'+w.name+'</td><td>'+w.code+'</td><td>'+(w.phone||'—')+'</td><td>'+(w.dept||'—')+'</td><td>'+(farm?farm.name:'—')+'</td>'+
+      '<td class="actions"><button class="btn sec sm" onclick="editWorker(\''+w.id+'\')">تعديل</button><button class="btn red sm" onclick="delWorker(\''+w.id+'\')">حذف</button></td></tr>';
+  }).join('');
+  document.getElementById('wTbl').innerHTML=
+    '<thead><tr><th>الاسم</th><th>الكود</th><th>التليفون</th><th>القسم</th><th>المزرعة</th><th></th></tr></thead><tbody>'+
+    (rows||'<tr><td colspan="6" class="empty">مفيش عمال — ضيف عامل أو استورد من Excel</td></tr>')+'</tbody>';
+}
+function saveWorker(){
+  const name=document.getElementById('wfName').value.trim();
+  const code=document.getElementById('wfCode').value.trim();
+  if(!name||!code){ toast('الاسم والكود مطلوبين'); return; }
+  const id=document.getElementById('wEditId').value;
+  const dup=workers.find(w=>String(w.code).trim()===code && w.id!==id);
+  if(dup){ toast('الكود مستخدم لعامل تاني'); return; }
+  const data={name,code,phone:document.getElementById('wfPhone').value.trim(),dept:document.getElementById('wfDept').value.trim(),farmId:document.getElementById('wfFarm').value||null};
+  if(id){ const w=workerById(id); Object.assign(w,data); }
+  else { workers.push({id:uid(),...data}); }
+  save(DB.workers,workers); resetWorkerForm(); fillWorkerSelects(); renderWorkers(); renderToday(); toast('اتحفظ ✔️');
+}
+function editWorker(id){ const w=workerById(id); document.getElementById('wEditId').value=w.id; document.getElementById('wfName').value=w.name; document.getElementById('wfCode').value=w.code; document.getElementById('wfPhone').value=w.phone||''; document.getElementById('wfDept').value=w.dept||''; document.getElementById('wfFarm').value=w.farmId||''; document.getElementById('wCancelBtn').style.display='inline-flex'; window.scrollTo({top:0,behavior:'smooth'}); }
+function resetWorkerForm(){ ['wEditId','wfName','wfCode','wfPhone','wfDept'].forEach(i=>document.getElementById(i).value=''); document.getElementById('wfFarm').value=''; document.getElementById('wCancelBtn').style.display='none'; }
+function delWorker(id){ if(!confirm('تحذف العامل ده؟ (سجلاته هتفضل موجودة)'))return; workers=workers.filter(w=>w.id!==id); save(DB.workers,workers); fillWorkerSelects(); renderWorkers(); renderToday(); }
+
+function downloadWorkerTemplate(){
+  const ws=XLSX.utils.aoa_to_sheet([['الاسم','كود الموظف','التليفون','القسم'],['أحمد محمد','1001','01000000000','مزارع']]);
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'العمال'); XLSX.writeFile(wb,'نموذج_العمال.xlsx');
+}
+function importWorkers(ev){
+  const file=ev.target.files[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
+      let added=0;
+      rows.forEach(r=>{
+        const name=(r['الاسم']||r['الاسم ']||r['name']||'').toString().trim();
+        const code=(r['كود الموظف']||r['الكود']||r['code']||'').toString().trim();
+        if(!name||!code) return;
+        if(workers.find(w=>String(w.code).trim()===code)) return;
+        workers.push({id:uid(),name,code,phone:(r['التليفون']||'').toString().trim(),dept:(r['القسم']||r['الإدارة']||'').toString().trim(),farmId:null});
+        added++;
+      });
+      save(DB.workers,workers); fillWorkerSelects(); renderWorkers(); renderToday();
+      toast('اتضاف '+added+' عامل');
+    }catch(err){ toast('الملف مش مظبوط'); }
+  };
+  reader.readAsArrayBuffer(file); ev.target.value='';
+}
+
+/* ---- FARMS ---- */
+function renderFarms(){
+  document.getElementById('fCount').textContent=farms.length;
+  const rows=farms.map(f=>{
+    const coords=(typeof f.lat==='number')?'<a href="https://maps.google.com/?q='+f.lat+','+f.lng+'" target="_blank" style="color:var(--green)">'+f.lat.toFixed(5)+', '+f.lng.toFixed(5)+'</a>':'—';
+    return '<tr><td>'+f.name+'</td><td>'+coords+'</td><td>'+f.radius+' م</td>'+
+      '<td class="actions"><button class="btn sec sm" onclick="editFarm(\''+f.id+'\')">تعديل</button><button class="btn red sm" onclick="delFarm(\''+f.id+'\')">حذف</button></td></tr>';
+  }).join('');
+  document.getElementById('fTbl').innerHTML=
+    '<thead><tr><th>المزرعة</th><th>الإحداثيات</th><th>النطاق</th><th></th></tr></thead><tbody>'+
+    (rows||'<tr><td colspan="4" class="empty">ضيف مزارعك عشان نقدر نقارن المواقع</td></tr>')+'</tbody>';
+}
+function saveFarm(){
+  const name=document.getElementById('ffName').value.trim();
+  const lat=parseFloat(document.getElementById('ffLat').value);
+  const lng=parseFloat(document.getElementById('ffLng').value);
+  const radius=parseInt(document.getElementById('ffRadius').value)||300;
+  if(!name){ toast('اكتب اسم المزرعة'); return; }
+  if(isNaN(lat)||isNaN(lng)){ toast('لازم تدخل الإحداثيات'); return; }
+  const id=document.getElementById('fEditId').value;
+  const data={name,lat,lng,radius};
+  if(id){ Object.assign(farmById(id),data); } else { farms.push({id:uid(),...data}); }
+  save(DB.farms,farms); resetFarmForm(); fillFarmSelects(); renderFarms(); toast('اتحفظت ✔️');
+}
+function editFarm(id){ const f=farmById(id); document.getElementById('fEditId').value=f.id; document.getElementById('ffName').value=f.name; document.getElementById('ffLat').value=f.lat; document.getElementById('ffLng').value=f.lng; document.getElementById('ffRadius').value=f.radius; document.getElementById('fCancelBtn').style.display='inline-flex'; window.scrollTo({top:0,behavior:'smooth'}); }
+function resetFarmForm(){ ['fEditId','ffName','ffLat','ffLng','ffPaste'].forEach(i=>document.getElementById(i).value=''); document.getElementById('ffPasteStatus').textContent=''; document.getElementById('ffRadius').value=300; document.getElementById('fCancelBtn').style.display='none'; }
+function parseCoordsPaste(){
+  const v=document.getElementById('ffPaste').value.trim();
+  const st=document.getElementById('ffPasteStatus');
+  if(!v){ st.textContent=''; return; }
+  // يدعم: لينك مكان (!3d..!4d..) — لينك (@lat,lng) — لينك (q=lat,lng) — أو إحداثيات منسوخة "lat, lng"
+  const m = v.match(/!3d(-?\d{1,3}\.\d+)!4d(-?\d{1,3}\.\d+)/)
+        || v.match(/@(-?\d{1,3}\.\d+),\s*(-?\d{1,3}\.\d+)/)
+        || v.match(/[?&]q=(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/)
+        || v.match(/(-?\d{1,3}\.\d+)[\s,،]+(-?\d{1,3}\.\d+)/);
+  if(m){
+    document.getElementById('ffLat').value=m[1];
+    document.getElementById('ffLng').value=m[2];
+    st.textContent='✔️ اتقرت الإحداثيات: '+m[1]+', '+m[2];
+    st.style.color='#15803d';
+  } else {
+    st.textContent='⚠️ مش قادر أقرا إحداثيات من النص ده — جرّب تنسخ الأرقام نفسها من جوجل ماب';
+    st.style.color='#dc2626';
+  }
+}
+function delFarm(id){ if(!confirm('تحذف المزرعة دي؟'))return; farms=farms.filter(f=>f.id!==id); save(DB.farms,farms); fillFarmSelects(); renderFarms(); }
+function captureFarmLoc(){
+  toast('بنحدد الموقع...');
+  getLocation().then(loc=>{ document.getElementById('ffLat').value=loc.lat; document.getElementById('ffLng').value=loc.lng; toast('اتسجّلت الإحداثيات ✔️'); })
+  .catch(e=>toast(e.message));
+}
+
+/* ---- REPORTS ---- */
+function buildReport(month){
+  // month = 'YYYY-MM'
+  return workers.map(w=>{
+    const wr=records.filter(r=>r.workerId===w.id && dayKey(r.timestamp).slice(0,7)===month);
+    const days={};
+    wr.forEach(r=>{ const d=dayKey(r.timestamp); (days[d]=days[d]||[]).push(r); });
+    let presentDays=0, totalHours=0, outCount=0;
+    Object.values(days).forEach(list=>{
+      list.sort((a,b)=>a.timestamp-b.timestamp);
+      const ins=list.filter(r=>r.type==='in');
+      if(ins.length) presentDays++;
+      const firstIn=ins[0], lastOut=list.filter(r=>r.type==='out').slice(-1)[0];
+      if(firstIn&&lastOut&&lastOut.timestamp>firstIn.timestamp) totalHours+=(lastOut.timestamp-firstIn.timestamp)/3600000;
+      outCount+=list.filter(r=>r.inRange===false).length;
+    });
+    return {name:w.name,code:w.code,presentDays,totalHours:totalHours.toFixed(1),outCount};
+  });
+}
+function renderReport(){
+  const month=document.getElementById('rMonth').value||todayKey().slice(0,7);
+  const rep=buildReport(month);
+  const rows=rep.map(r=>'<tr><td>'+r.name+'</td><td>'+r.code+'</td><td>'+r.presentDays+'</td><td>'+r.totalHours+' س</td><td>'+(r.outCount?'<span class="badge out">'+r.outCount+'</span>':'0')+'</td></tr>').join('');
+  document.getElementById('repTbl').innerHTML=
+    '<thead><tr><th>العامل</th><th>الكود</th><th>أيام الحضور</th><th>إجمالي الساعات</th><th>تسجيلات خارج النطاق</th></tr></thead><tbody>'+
+    (rows||'<tr><td colspan="5" class="empty">لا توجد بيانات</td></tr>')+'</tbody>';
+}
+function exportReportExcel(){
+  const month=document.getElementById('rMonth').value||todayKey().slice(0,7);
+  const rep=buildReport(month);
+  const aoa=[['العامل','الكود','أيام الحضور','إجمالي الساعات','تسجيلات خارج النطاق'],...rep.map(r=>[r.name,r.code,r.presentDays,r.totalHours,r.outCount])];
+  const ws=XLSX.utils.aoa_to_sheet(aoa); const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'تقرير '+month); XLSX.writeFile(wb,'تقرير_شهري_'+month+'.xlsx');
+}
+function exportRecordsExcel(){
+  const rs=getFilteredRecords();
+  const aoa=[['العامل','الكود','النوع','التاريخ','الوقت','الموقع','المسافة (م)','المزرعة','المصدر','Latitude','Longitude']];
+  rs.forEach(r=>{ const w=workerById(r.workerId); if(!w)return; const farm=r.farmId?farmById(r.farmId):null;
+    aoa.push([w.name,w.code,r.type==='in'?'حضور':'انصراف',dayKey(r.timestamp),fmtTime(r.timestamp),
+      r.lat==null?'بدون موقع':(r.inRange?'داخل النطاق':'خارج النطاق'),r.distance==null?'':r.distance,farm?farm.name:'',r.source==='self'?'العامل':'يدوي',r.lat==null?'':r.lat,r.lng==null?'':r.lng]);
+  });
+  const ws=XLSX.utils.aoa_to_sheet(aoa); const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'السجلات'); XLSX.writeFile(wb,'سجلات_الحضور.xlsx');
+}
+
+/* ---- MAP ---- */
+function renderMap(){
+  if(typeof L==='undefined'){ document.getElementById('map').innerHTML='<div class="empty">الخريطة محتاجة إنترنت لتحميلها</div>'; return; }
+  if(!mapInited){ leafMap=L.map('map').setView([30.5,31.0],8); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(leafMap); mapInited=true; }
+  if(mapLayer) leafMap.removeLayer(mapLayer);
+  mapLayer=L.layerGroup().addTo(leafMap);
+  const pts=[];
+  farms.forEach(f=>{ if(typeof f.lat==='number'){ L.marker([f.lat,f.lng]).addTo(mapLayer).bindPopup('🚩 '+f.name); L.circle([f.lat,f.lng],{radius:f.radius,color:'#15803d',fillColor:'#86efac',fillOpacity:.15}).addTo(mapLayer); pts.push([f.lat,f.lng]); } });
+  const date=document.getElementById('mapDate').value||todayKey();
+  records.filter(r=>dayKey(r.timestamp)===date && r.lat!=null).forEach(r=>{
+    const w=workerById(r.workerId); const color=r.inRange?'#16a34a':'#ea580c';
+    L.circleMarker([r.lat,r.lng],{radius:8,color:'#fff',weight:2,fillColor:color,fillOpacity:1}).addTo(mapLayer)
+      .bindPopup((w?w.name:'')+'<br>'+(r.type==='in'?'حضور':'انصراف')+' '+fmtTime(r.timestamp)+'<br>'+(r.inRange?'داخل النطاق':'خارج النطاق بـ '+r.distance+'م'));
+    pts.push([r.lat,r.lng]);
+  });
+  if(pts.length){ leafMap.fitBounds(pts,{padding:[40,40],maxZoom:15}); }
+  setTimeout(()=>leafMap.invalidateSize(),200);
+}
+
+/* ---- IMPORT/EXPORT JSON ---- */
+function downloadJSON(obj,filename){ const blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click(); }
+let pendingImport=null;
+function importRecords(ev){
+  const file=ev.target.files[0]; if(!file)return; const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!data.records||!data.records.length){ toast('الملف مفيهوش تسجيلات'); return; }
+      // مطابقة العامل بالكود مع قاعدة بيانات الإدارة
+      const wInfo=data.worker||{};
+      const target=workers.find(x=>String(x.code).trim()===String(wInfo.code||'').trim())||null;
+      // إعادة حساب المسافة والنطاق على مزارع الإدارة (لأن موبايل العامل مفيهوش المزارع)
+      const computed=data.records.map(r=>{
+        if(r.lat==null||r.lng==null) return {...r};
+        const info=locateAgainstAnyFarm(r.lat,r.lng);
+        if(info) return {...r,farmId:info.farm.id,distance:info.distance,inRange:info.inRange};
+        return {...r};
+      });
+      pendingImport={worker:wInfo,target,computed,odoComputed:data.odoReadings||[],visitsRaw:data.visits||[]};
+      renderImportPreview();
+    }catch(err){ toast('الملف مش مظبوط'); }
+  };
+  reader.readAsText(file); ev.target.value='';
+}
+function renderImportPreview(){
+  const {worker:wInfo,target,computed}=pendingImport;
+  const existing=new Set(records.map(r=>r.id));
+  const newCount=computed.filter(r=>!existing.has(r.id)).length;
+  document.getElementById('ipInfo').innerHTML=
+    '👷 '+(wInfo.name||'غير معروف')+' — كود: <b>'+(wInfo.code||'—')+'</b>'+
+    (target?'':' <span class="badge out">كود جديد — هيتضاف تلقائياً</span>')+
+    ' — تسجيلات جديدة: '+newCount;
+  // تجميع يوم بيوم: أول حضور / آخر انصراف / الساعات / المزرعة
+  const days={};
+  computed.forEach(r=>{ const d=dayKey(r.timestamp); (days[d]=days[d]||[]).push(r); });
+  const rows=Object.keys(days).sort().map(d=>{
+    const list=days[d].sort((a,b)=>a.timestamp-b.timestamp);
+    const ins=list.filter(r=>r.type==='in'), outs=list.filter(r=>r.type==='out');
+    const firstIn=ins[0], lastOut=outs[outs.length-1];
+    let hours='—';
+    if(firstIn&&lastOut&&lastOut.timestamp>firstIn.timestamp) hours=((lastOut.timestamp-firstIn.timestamp)/3600000).toFixed(1)+' س';
+    const farmNames=[...new Set(list.map(r=>r.farmId).filter(Boolean).map(id=>{const f=farmById(id);return f?f.name:'';}))].filter(Boolean).join('، ')||'—';
+    const hasLoc=list.some(r=>r.lat!=null);
+    const anyOut=list.some(r=>r.inRange===false);
+    const locBadge=hasLoc?(anyOut?'<span class="badge out">فيه خارج النطاق</span>':'<span class="badge in">داخل النطاق</span>'):'<span class="badge none">بدون موقع</span>';
+    const dayNum=parseInt(d.slice(8),10);
+    return '<tr><td><b>'+dayNum+'</b></td><td>'+d+'</td><td>'+(firstIn?fmtTime(firstIn.timestamp):'—')+'</td><td>'+(lastOut?fmtTime(lastOut.timestamp):'—')+'</td><td>'+hours+'</td><td>'+farmNames+'</td><td>'+locBadge+'</td></tr>';
+  }).join('');
+  document.getElementById('ipTbl').innerHTML=
+    '<thead><tr><th>اليوم</th><th>التاريخ</th><th>حضور</th><th>انصراف</th><th>الساعات</th><th>المزرعة</th><th>الموقع</th></tr></thead><tbody>'+rows+'</tbody>';
+  document.getElementById('importPreview').classList.remove('hidden');
+  document.getElementById('importPreview').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function confirmImport(){
+  if(!pendingImport)return;
+  const {worker:wInfo,computed,odoComputed}=pendingImport;
+  let target=pendingImport.target;
+  if(!target){
+    target={id:uid(),name:wInfo.name||('عامل '+(wInfo.code||'')),code:wInfo.code||'',phone:'',dept:'',farmId:null};
+    workers.push(target); save(DB.workers,workers);
+  }
+  const existing=new Set(records.map(r=>r.id)); let added=0;
+  computed.forEach(r=>{ if(!existing.has(r.id)){ records.push({...r,workerId:target.id}); added++; } });
+  save(DB.records,records);
+  // import odometer readings
+  const existOdo=new Set(odoReadings.map(r=>r.id)); let addedOdo=0;
+  (odoComputed||[]).forEach(r=>{ if(!existOdo.has(r.id)){ odoReadings.push({...r,workerId:target.id}); addedOdo++; } });
+  save(DB.odo,odoReadings);
+  // import visits
+  const existVisits=new Set(visits.map(r=>r.id)); let addedV=0;
+  (pendingImport.visitsRaw||[]).forEach(r=>{ if(!existVisits.has(r.id)){ visits.push({...r,workerId:target.id}); addedV++; } });
+  save(DB.visits,visits);
+  refreshAll();
+  toast('اتضاف '+added+' حضور + '+addedOdo+' عداد + '+addedV+' زيارة لـ '+target.name+' ✔️');
+  cancelImport();
+}
+function cancelImport(){ pendingImport=null; document.getElementById('importPreview').classList.add('hidden'); }
+function changePass(){ const p=document.getElementById('newPass').value; if(p.length<3){ toast('كلمة المرور قصيرة'); return; } localStorage.setItem(DB.pass,p); document.getElementById('newPass').value=''; toast('اتغيّرت ✔️'); }
+function backupAll(){ downloadJSON({type:'fwa_backup',workers,farms,records,odoReadings,visits,exportedAt:Date.now()},'نسخة_احتياطية_'+todayKey()+'.json'); }
+function restoreAll(ev){
+  const file=ev.target.files[0]; if(!file)return; if(!confirm('الاستعادة هتستبدل كل البيانات الحالية. متأكد؟'))return;
+  const reader=new FileReader();
+  reader.onload=e=>{ try{ const d=JSON.parse(e.target.result); workers=d.workers||[]; farms=d.farms||[]; records=d.records||[]; odoReadings=d.odoReadings||[]; visits=d.visits||[]; save(DB.workers,workers); save(DB.farms,farms); save(DB.records,records); save(DB.odo,odoReadings); save(DB.visits,visits); refreshAll(); toast('اتستعادت ✔️'); }catch(err){ toast('الملف مش مظبوط'); } };
+  reader.readAsText(file); ev.target.value='';
+}
+function clearAllData(){ if(!confirm('هتحذف كل البيانات نهائياً. متأكد؟'))return; if(!confirm('تأكيد أخير — مفيش رجوع!'))return; [DB.workers,DB.farms,DB.records,DB.odo,DB.visits].forEach(k=>localStorage.removeItem(k)); workers=[];farms=[];records=[];odoReadings=[];visits=[]; refreshAll(); toast('اتمسح الكل'); }
+</script>
+</body>
+</html>
+
+<script>
+// ===== PWA: Manifest + Service Worker =====
+(function(){
+  // Manifest inline بدون ملف خارجي
+  const manifest = {
+    name: "متابعة العمالة الميدانية",
+    short_name: "عمالة ميدانية",
+    description: "نظام متابعة حضور وانصراف العمالة الميدانية",
+    start_url: "./",
+    display: "standalone",
+    background_color: "#f0fdf4",
+    theme_color: "#15803d",
+    lang: "ar",
+    dir: "rtl",
+    orientation: "portrait",
+    icons: [
+      {
+        src: "data:image/svg+xml;base64," + btoa(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%2315803d'/><text x='50%' y='55%' font-size='110' text-anchor='middle' dominant-baseline='middle'>🚜</text></svg>`),
+        sizes: "192x192",
+        type: "image/svg+xml",
+        purpose: "any maskable"
+      },
+      {
+        src: "data:image/svg+xml;base64," + btoa(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='80' fill='%2315803d'/><text x='50%' y='55%' font-size='300' text-anchor='middle' dominant-baseline='middle'>🚜</text></svg>`),
+        sizes: "512x512",
+        type: "image/svg+xml",
+        purpose: "any maskable"
+      }
+    ]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  document.getElementById('pwaManifest').href = url;
+
+  // Service Worker inline — بيخزّن الصفحة عشان تشتغل offline
+  if('serviceWorker' in navigator){
+    const swCode = `
+const CACHE = 'fwa-v1';
+const URLS  = [self.location.href.replace('/sw.js','') || '/'];
+self.addEventListener('install',  e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(URLS))); self.skipWaiting(); });
+self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k))))); self.clients.claim(); });
+self.addEventListener('fetch',    e => { e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))); });
+`;
+    const swBlob = new Blob([swCode], {type:'text/javascript'});
+    const swUrl  = URL.createObjectURL(swBlob);
+    navigator.serviceWorker.register(swUrl).catch(()=>{});
+  }
+
+  // زرار "ثبّت التطبيق" للأندرويد
+  let deferredPrompt = null;
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    // أظهر الزرار في أي واجهة ظاهرة
+    showInstallBtn();
+  });
+  function showInstallBtn(){
+    const existing = document.getElementById('installBtn');
+    if(existing) return;
+    const btn = document.createElement('button');
+    btn.id = 'installBtn';
+    btn.textContent = '📲 ثبّت التطبيق على شاشتك';
+    btn.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#15803d;color:#fff;border:none;padding:13px 22px;border-radius:12px;font-family:Cairo,sans-serif;font-size:15px;font-weight:700;cursor:pointer;z-index:1500;box-shadow:0 4px 16px rgba(0,0,0,.25);white-space:nowrap';
+    btn.onclick = async () => {
+      if(!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      btn.remove();
+    };
+    document.body.appendChild(btn);
+    // يختفي تلقائياً بعد 10 ثواني لو ما ضغطوش
+    setTimeout(()=>btn.remove(), 10000);
+  }
+
+  // رسالة iPhone (Safari لا بيدعم beforeinstallprompt)
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isInStandalone = window.navigator.standalone === true;
+  if(isIos && !isInStandalone){
+    setTimeout(()=>{
+      const banner = document.createElement('div');
+      banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#14532d;color:#fff;padding:14px 16px 20px;font-family:Cairo,sans-serif;font-size:14px;font-weight:600;text-align:center;z-index:1500;border-radius:16px 16px 0 0;direction:rtl';
+      banner.innerHTML = '📲 عشان تثبّت التطبيق على iPhone:<br>اضغط <b>□↑</b> (Share) ثم اختار <b>"إضافة إلى الشاشة الرئيسية"</b><br><button onclick="this.parentElement.remove()" style="margin-top:8px;background:rgba(255,255,255,.2);color:#fff;border:none;padding:6px 18px;border-radius:8px;font-family:Cairo,sans-serif;font-weight:700;cursor:pointer">حسناً</button>';
+      document.body.appendChild(banner);
+    }, 2500);
+  }
+})();
+</script>
